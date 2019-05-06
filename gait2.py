@@ -5,22 +5,33 @@ import time
 from lx16a import LX16A, ServoError
 
 # initialize
-LX16A.initialize("/dev/ttyUSB0")
+LX16A.initialize("/dev/ttyUSB2")
 
 lift_range = [75, 115]
 
-gait_range = [
+gait1_range = [
+	[90, 170],
+	lift_range,
+	[170, 90],
+	lift_range,
+	[180, 100],
+	lift_range,
+	[100, 180],
+	lift_range,
+	[0, 150]
+]
+
+gait2_range = [
+	[90, 170],
+	lift_range,
 	[90, 170],
 	lift_range,
 	[180, 100],
 	lift_range,
-	[170, 90],
+	[180, 100],
 	lift_range,
-	[100, 180],
-	lift_range,
-	[20, 150]
+	[0,150]
 ]
-
 
 class Servo(object):
 	def __init__(self, id, lower=None, upper=None):
@@ -67,7 +78,7 @@ class Robot(object):
 		for i in range(4):
 			leg = self.legs[i+1]
 			print(2*i+1)
-			spread_pos = (gait_range[2*i][0], gait_range[2*i+1][0])
+			spread_pos = (gait1_range[2*i][0], gait1_range[2*i+1][0])
 			servo1 = leg.servo1.servo
 			servo2 = leg.servo2.servo
 			servo1.moveTimeWrite(spread_pos[0], dura)
@@ -76,7 +87,7 @@ class Robot(object):
 
 	def gaitNaive(self, dura=500):
 		while True:
-			for leg in self.legs[1:]:
+			for leg in [self.legs[1], self.legs[3], self.legs[2], self.legs[4]]:
 				servo1 = leg.servo1.servo
 				servo2 = leg.servo2.servo
 
@@ -97,26 +108,27 @@ class Robot(object):
 				# time.sleep(dura*9/1000)
 
 
-	def gaitSpin(self):
+	def gaitSpin(self, dura=500):
 		while True:
-			for leg in self.legs[1:]:
+			for i in range(1):
+				leg = self.legs[i+1]
 				servo1 = leg.servo1.servo
 				servo2 = leg.servo2.servo
 
 				# raise leg
-				servo2.moveTimeWrite(leg.servo2.upper, dura)
+				servo2.moveTimeWrite(gait2_range[2*i+1][1], dura)
 				# spin forward
-				servo1.moveTimeWrite(leg.servo1.upper, dura)
+				servo1.moveTimeWrite(gait2_range[2*i][1], dura)
 
 				time.sleep(dura/1000)
 
 				# drop leg
-				servo2.moveTimeWrite(leg.servo2.lower, dura)
+				servo2.moveTimeWrite(gait2_range[2*i+1][0], dura)
 
 				time.sleep(dura/1000)
 
 				# spin backward
-				servo1.moveTimeWrite(leg.servo1.lower, dura*6)
+				servo1.moveTimeWrite(gait2_range[2*i][0], dura*6)
 
 
 
@@ -128,19 +140,19 @@ if __name__ == "__main__":
 
 	servos = ["undefined"]
 	for i in range(9):
-		servos.append(Servo(i+1, gait_range[i][0], gait_range[i][1]))
+		servos.append(Servo(i+1, gait1_range[i][0], gait1_range[i][1]))
 
 	legs = ["undefined"]
 	legs.append(Leg(servos[1], servos[2]))
-	legs.append(Leg(servos[5], servos[6]))
 	legs.append(Leg(servos[3], servos[4]))
+	legs.append(Leg(servos[5], servos[6]))
 	legs.append(Leg(servos[7], servos[8]))
-	# core = Servo(9)
 	
 	Rollbot = Robot(legs, servos[9])
 	Rollbot.spread(dura=1500)
 	try:
 		Rollbot.gaitNaive()
+		# Rollbot.gaitSpin()
 	except KeyboardInterrupt:
 		print("Interrupted by keyboard")
 		Rollbot.fold(dura=1500)
