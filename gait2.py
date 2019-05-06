@@ -1,9 +1,26 @@
+import sys
+import os
 import time
 
 from lx16a import LX16A, ServoError
+from fold import Poses
 
 # initialize
 LX16A.initialize("/dev/ttyUSB0")
+
+lift_range = [75, 115]
+
+gait_range = [
+	[90, 170],
+	lift_range,
+	[180, 100],
+	lift_range,
+	[170, 90],
+	lift_range,
+	[100, 180],
+	lift_range,
+	[20, 150]
+]
 
 
 class Servo(object):
@@ -28,78 +45,107 @@ class Leg(object):
 		return (self.vert_range, self.hori_range)
 
 
+class Robot(object):
+	def __init__(self, legs, core):
+		self.dura = 1000
+		self.cycle = self.dura * 2 * 4
+		self.legs = legs
+		self.core = core
 
-def gaitNaive(leg, dura=500):
+	def fold(self, dura=500):
+		fold_pos = (180, 0)
+		for leg in self.legs[1:]:
+			servo1 = leg.servo1.servo
+			servo2 = leg.servo2.servo
+			servo1.moveTimeWrite(fold_pos[0], dura)
+			servo2.moveTimeWrite(fold_pos[1], dura)
+		time.sleep(dura/1000)
+		self.core.servo.moveTimeWrite(0, dura)
 
-	servo1 = leg.servo1.servo
-	servo2 = leg.servo2.servo
+	def spread(self, dura=500):
+		self.core.servo.moveTimeWrite(90, dura)
+		time.sleep(dura/1000)
+		for i in range(4):
+			leg = self.legs[i+1]
+			print(2*i+1)
+			spread_pos = (gait_range[2*i][0], gait_range[2*i+1][0])
+			servo1 = leg.servo1.servo
+			servo2 = leg.servo2.servo
+			servo1.moveTimeWrite(spread_pos[0], dura)
+			servo2.moveTimeWrite(spread_pos[1], dura)
+		time.sleep(dura/1000)
 
-	# raise leg
-	servo2.moveTimeWrite(leg.servo2.upper, dura)
-	# spin forward
-	servo1.moveTimeWrite(leg.servo1.upper, dura)
+	def gaitNaive(self, dura=500):
+		while True:
+			for leg in self.legs[1:]:
+				servo1 = leg.servo1.servo
+				servo2 = leg.servo2.servo
 
-	time.sleep(dura/1000)
+				# raise leg
+				servo2.moveTimeWrite(leg.servo2.upper, dura)
+				# spin forward
+				servo1.moveTimeWrite(leg.servo1.upper, dura)
 
-	# drop leg
-	servo2.moveTimeWrite(leg.servo2.lower, dura)
+				time.sleep(dura/1000)
 
-	time.sleep(dura/1000)
+				# drop leg
+				servo2.moveTimeWrite(leg.servo2.lower, dura)
 
-	# spin backward
-	servo1.moveTimeWrite(leg.servo1.lower, dura*6)
-	# time.sleep(dura*9/1000)
+				time.sleep(dura/1000)
 
-lift_range = [55, 95]
-
-servo_range = [
-	[90, 170],
-	lift_range,
-	[180, 100],
-	lift_range,
-	[170, 90],
-	lift_range,
-	[100, 180],
-	lift_range
-]
-
-servos = ["undefined"]
-for i in range(8):
-	servos.append(Servo(i+1, servo_range[i][0], servo_range[i][1]))
-# servo 1
-# servos.append(Servo(1, 90, 170))
-# # servo 2
-# servos.append(Servo(2, 55, 95))
-
-# servos.append(Servo(3, 180, 100))
-
-# servos.append(Servo(4, 55, 95))
-
-# servos.append(Servo(5, 170, 90))
-
-# servos.append(Servo(6, 55, 95))
-
-# servos.append(Servo(7, 100, 180))
-
-# servos.append(Servo(8, 55, 95))
+				# spin backward
+				servo1.moveTimeWrite(leg.servo1.lower, dura*6)
+				# time.sleep(dura*9/1000)
 
 
-legs = ["undefined"]
-# for i in range(4):
-#	 legs.append((servos[2*i+1], servos[2*i+2]))
-legs.append(Leg(servos[1], servos[2]))
-legs.append(Leg(servos[5], servos[6]))
-legs.append(Leg(servos[3], servos[4]))
-legs.append(Leg(servos[7], servos[8]))
+	def gaitSpin(self):
+		while True:
+			for leg in self.legs[1:]:
+				servo1 = leg.servo1.servo
+				servo2 = leg.servo2.servo
 
-# servo1Range = (55, 90)
-# servo2Range = (90, 140)
+				# raise leg
+				servo2.moveTimeWrite(leg.servo2.upper, dura)
+				# spin forward
+				servo1.moveTimeWrite(leg.servo1.upper, dura)
+
+				time.sleep(dura/1000)
+
+				# drop leg
+				servo2.moveTimeWrite(leg.servo2.lower, dura)
+
+				time.sleep(dura/1000)
+
+				# spin backward
+				servo1.moveTimeWrite(leg.servo1.lower, dura*6)
 
 
-while True:
-	gaitNaive(legs[1])
-	gaitNaive(legs[2])
-	gaitNaive(legs[3])
-	gaitNaive(legs[4])
 
-gaitNaive(legs[2])
+
+
+
+
+if __name__ == "__main__":
+
+	servos = ["undefined"]
+	for i in range(9):
+		servos.append(Servo(i+1, gait_range[i][0], gait_range[i][1]))
+
+	legs = ["undefined"]
+	legs.append(Leg(servos[1], servos[2]))
+	legs.append(Leg(servos[5], servos[6]))
+	legs.append(Leg(servos[3], servos[4]))
+	legs.append(Leg(servos[7], servos[8]))
+	# core = Servo(9)
+	
+	Rollbot = Robot(legs, servos[9])
+	Rollbot.spread(dura=1500)
+	try:
+		Rollbot.gaitNaive()
+	except KeyboardInterrupt:
+		print("Interrupted by keyboard")
+		Rollbot.fold(dura=1500)
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os.exit(0)
