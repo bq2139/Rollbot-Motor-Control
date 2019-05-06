@@ -3,7 +3,6 @@ import os
 import time
 
 from lx16a import LX16A, ServoError
-from fold import Poses
 
 # initialize
 LX16A.initialize("/dev/ttyUSB0")
