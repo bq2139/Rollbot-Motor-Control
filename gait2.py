@@ -160,7 +160,8 @@ if __name__ == "__main__":
 	Rollbot = Robot(legs, servos[9], servos)
 	Rollbot.spread(dura=1500)
 	try:
-		while True:
+		num_cycles = 5
+		for i in range(num_cycles):
 			Rollbot.gaitNaive()
 			# Rollbot.gaitSpin()
 	except KeyboardInterrupt:
