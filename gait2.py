@@ -56,20 +56,34 @@ class Leg(object):
 
 
 class Robot(object):
-	def __init__(self, legs, core):
+	def __init__(self, legs, core, servos):
+		self.servos = servos
+		self.start = time.time()
 		self.dura = 1000
 		self.cycle = self.dura * 2 * 4
 		self.legs = legs
 		self.core = core
+		self.pos_history = []
+		for i in range(9):
+			self.pos_history[i] = []
+
+
+	def pos(self):
+		timestamp = time.time() - self.start
+		for i in range(9):
+			self.pos_history[i].append([timestamp, self.servos[i+1].servo.getPhysicalPos()])
 
 	def fold(self, dura=500):
 		fold_pos = (180, 0)
-		for leg in self.legs[1:]:
+		for i in range(8):
+			leg = self.legs[i+1]
 			servo1 = leg.servo1.servo
 			servo2 = leg.servo2.servo
 			servo1.moveTimeWrite(fold_pos[0], dura)
 			servo2.moveTimeWrite(fold_pos[1], dura)
+			self.pos()
 		time.sleep(dura/1000)
+
 		self.core.servo.moveTimeWrite(0, dura)
 
 	def spread(self, dura=500):
@@ -86,53 +100,47 @@ class Robot(object):
 		time.sleep(dura/1000)
 
 	def gaitNaive(self, dura=500):
-		while True:
-			for leg in [self.legs[1], self.legs[3], self.legs[2], self.legs[4]]:
-				servo1 = leg.servo1.servo
-				servo2 = leg.servo2.servo
+		for leg in [self.legs[1], self.legs[3], self.legs[2], self.legs[4]]:
+			servo1 = leg.servo1.servo
+			servo2 = leg.servo2.servo
 
-				# raise leg
-				servo2.moveTimeWrite(leg.servo2.upper, dura)
-				# spin forward
-				servo1.moveTimeWrite(leg.servo1.upper, dura)
+			# raise leg
+			servo2.moveTimeWrite(leg.servo2.upper, dura)
+			# spin forward
+			servo1.moveTimeWrite(leg.servo1.upper, dura)
 
-				time.sleep(dura/1000)
+			time.sleep(dura/1000)
 
-				# drop leg
-				servo2.moveTimeWrite(leg.servo2.lower, dura)
+			# drop leg
+			servo2.moveTimeWrite(leg.servo2.lower, dura)
 
-				time.sleep(dura/1000)
+			time.sleep(dura/1000)
 
-				# spin backward
-				servo1.moveTimeWrite(leg.servo1.lower, dura*6)
-				# time.sleep(dura*9/1000)
+			# spin backward
+			servo1.moveTimeWrite(leg.servo1.lower, dura*6)
+			# time.sleep(dura*9/1000)
 
 
 	def gaitSpin(self, dura=500):
-		while True:
-			for i in range(1):
-				leg = self.legs[i+1]
-				servo1 = leg.servo1.servo
-				servo2 = leg.servo2.servo
+		for i in range(4):
+			leg = self.legs[i+1]
+			servo1 = leg.servo1.servo
+			servo2 = leg.servo2.servo
 
-				# raise leg
-				servo2.moveTimeWrite(gait2_range[2*i+1][1], dura)
-				# spin forward
-				servo1.moveTimeWrite(gait2_range[2*i][1], dura)
+			# raise leg
+			servo2.moveTimeWrite(gait2_range[2*i+1][1], dura)
+			# spin forward
+			servo1.moveTimeWrite(gait2_range[2*i][1], dura)
 
-				time.sleep(dura/1000)
+			time.sleep(dura/1000)
 
-				# drop leg
-				servo2.moveTimeWrite(gait2_range[2*i+1][0], dura)
+			# drop leg
+			servo2.moveTimeWrite(gait2_range[2*i+1][0], dura)
 
-				time.sleep(dura/1000)
+			time.sleep(dura/1000)
 
-				# spin backward
-				servo1.moveTimeWrite(gait2_range[2*i][0], dura*6)
-
-
-
-
+			# spin backward
+			servo1.moveTimeWrite(gait2_range[2*i][0], dura*6)
 
 
 
@@ -148,12 +156,15 @@ if __name__ == "__main__":
 	legs.append(Leg(servos[5], servos[6]))
 	legs.append(Leg(servos[7], servos[8]))
 	
-	Rollbot = Robot(legs, servos[9])
+	Rollbot = Robot(legs, servos[9], servos)
 	Rollbot.spread(dura=1500)
 	try:
-		Rollbot.gaitNaive()
-		# Rollbot.gaitSpin()
+		while True:
+			Rollbot.gaitNaive()
+			# Rollbot.gaitSpin()
 	except KeyboardInterrupt:
+		plt.figure()
+		plt.plot(Rollbot.pos_history[0])
 		print("Interrupted by keyboard")
 		Rollbot.fold(dura=1500)
 		try:
