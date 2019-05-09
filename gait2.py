@@ -1,11 +1,12 @@
 import sys
 import os
 import time
+import matplotlib.pyplot as plt
 
 from lx16a import LX16A, ServoError
 
 # initialize
-LX16A.initialize("/dev/ttyUSB2")
+LX16A.initialize("/dev/ttyUSB0")
 
 lift_range = [75, 115]
 
@@ -63,7 +64,7 @@ class Robot(object):
 		self.cycle = self.dura * 2 * 4
 		self.legs = legs
 		self.core = core
-		self.pos_history = []
+		self.pos_history = [" "]*9
 		for i in range(9):
 			self.pos_history[i] = []
 
@@ -164,7 +165,9 @@ if __name__ == "__main__":
 			# Rollbot.gaitSpin()
 	except KeyboardInterrupt:
 		plt.figure()
-		plt.plot(Rollbot.pos_history[0])
+		for i in Rollbot.pos_history:
+			plt.plot(i)
+		plt.savefig("angle-time.png")
 		print("Interrupted by keyboard")
 		Rollbot.fold(dura=1500)
 		try:
