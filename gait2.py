@@ -164,10 +164,16 @@ if __name__ == "__main__":
 		for i in range(num_cycles):
 			Rollbot.gaitNaive()
 			# Rollbot.gaitSpin()
+		plt.figure()
+		col = plt.cm.jet(range(9))  
+		for i in Rollbot.pos_history:
+			plt.plot(i, color=col[i])
+		plt.savefig("angle-time.png")
 	except KeyboardInterrupt:
 		plt.figure()
+		col = plt.cm.jet(range(9))  
 		for i in Rollbot.pos_history:
-			plt.plot(i)
+			plt.plot(i, color=col[i])
 		plt.savefig("angle-time.png")
 		print("Interrupted by keyboard")
 		Rollbot.fold(dura=1500)
